@@ -126,9 +126,24 @@ dotnet build VelocityMeter/VelocityMeter.csproj -c Release /p:GameManagedDir="<�
 плагинов) и не могут быть получены обычным раннером GitHub Actions. Поэтому
 они лежат отдельным приватным кэшем — asset-архивом `GameLibs.zip` в
 специальном GitHub Release с тегом `gamelibs-cache` в этом же репозитории;
-workflow скачивает его перед сборкой через `GITHUB_TOKEN`.
+workflow скачивает его перед сборкой через `GITHUB_TOKEN`. Без этого шага
+любой запуск workflow упадёт на шаге "Fetch game reference DLLs".
 
-Создать/обновить кэш (один раз или при обновлении игры):
+Архив `GameLibs.zip` должен содержать (без вложенных папок, файлы прямо в
+корне архива) три файла из `Seum_Data/Managed` установленной игры:
+`Assembly-CSharp.dll`, `Assembly-CSharp-firstpass.dll`, `Rewired_Core.dll`.
+
+**Вариант A — через веб-интерфейс GitHub (без `gh` CLI):**
+
+1. Откройте `https://github.com/Nooomer/SeumPlugins/releases/new`.
+2. В поле "Choose a tag" введите `gamelibs-cache` и нажмите "Create new tag".
+3. Заголовок — например `Game reference libraries (private cache)`.
+4. Перетащите файл `GameLibs.zip` в область "Attach binaries".
+5. Отметьте галочку **"Set as a pre-release"** (это служебный кэш, а не
+   релиз плагинов).
+6. Нажмите **"Publish release"**.
+
+**Вариант B — через `gh` CLI** (один раз или при обновлении игры):
 
 ```bash
 gh release create gamelibs-cache GameLibs.zip \
@@ -138,5 +153,26 @@ gh release create gamelibs-cache GameLibs.zip \
   --prerelease
 ```
 
-где `GameLibs.zip` содержит `Assembly-CSharp.dll`, `Assembly-CSharp-firstpass.dll`
-и `Rewired_Core.dll` из `Seum_Data/Managed` установленной игры.
+Если версия игры (а значит и её DLL) обновится — просто загрузите новый
+`GameLibs.zip` тем же способом как новый asset в существующий релиз
+`gamelibs-cache` (в вебе — открыть релиз → Edit → заменить файл; в CLI —
+`gh release upload gamelibs-cache GameLibs.zip --clobber`).
+
+### Как запустить релиз вручную
+
+Обычный триггер — пуш в `main` с изменённой `<Version>` хотя бы в одном
+`.csproj`. Если версии не менялись (например, для самого первого прогона
+пайплайна), workflow не найдёт изменений и ничего не соберёт — это
+ожидаемо, не баг.
+
+Чтобы собрать и выпустить релиз со всеми текущими плагинами вручную,
+независимо от версий:
+
+1. Вкладка **Actions** в репозитории → workflow **"Build & release plugins"**.
+2. Кнопка **"Run workflow"** (справа) → ветка `main`.
+3. Поставьте галочку **`force`** — "Пересобрать и выпустить релиз со всеми
+   плагинами, даже если версии не менялись".
+4. **"Run workflow"**.
+
+После успешного прогона в разделе **Releases** появится новый релиз с тремя
+DLL (`VelocityMeter.dll`, `SeumDiscordRPC.dll`, `LiveScoreSender.dll`).

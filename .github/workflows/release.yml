@@ -11,7 +11,12 @@ on:
     branches: [main]
     paths:
       - "**/*.csproj"
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      force:
+        description: "Пересобрать и выпустить релиз со всеми плагинами, даже если версии не менялись (например, для самого первого релиза)"
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -27,6 +32,7 @@ jobs:
     outputs:
       matrix: ${{ steps.diff.outputs.matrix }}
       any_changed: ${{ steps.diff.outputs.any_changed }}
+      force: ${{ steps.diff.outputs.force }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -47,6 +53,7 @@ jobs:
             return $null
           }
 
+          $force = "${{ github.event_name == 'workflow_dispatch' && inputs.force }}" -eq "true"
           $prevSha = git rev-parse HEAD~1 2>$null
           $changed = @()
           $all = @()
@@ -62,7 +69,7 @@ jobs:
             $entry = [ordered]@{ name = $p.Name; path = $p.Path; version = $current }
             $all += $entry
 
-            if ($previous -ne $current) {
+            if ($force -or $previous -ne $current) {
               Write-Host "$($p.Name): $previous -> $current (rebuild)"
               $changed += $entry
             } else {
@@ -73,6 +80,7 @@ jobs:
           $matrixJson = ($all | ConvertTo-Json -Compress -AsArray)
           "matrix=$matrixJson" >> $env:GITHUB_OUTPUT
           "any_changed=$($changed.Count -gt 0)" >> $env:GITHUB_OUTPUT
+          "force=$force" >> $env:GITHUB_OUTPUT
 
   build:
     needs: detect-changes
@@ -94,6 +102,9 @@ jobs:
             --pattern "GameLibs.zip" `
             --output "${{ runner.temp }}\GameLibs.zip" `
             --clobber
+          if ($LASTEXITCODE -ne 0) {
+            throw "Не удалось скачать GameLibs.zip из релиза '${{ env.GAMELIBS_RELEASE_TAG }}'. Загрузите архив один раз, см. README -> CI/CD -> Одноразовая настройка."
+          }
           Expand-Archive -Path "${{ runner.temp }}\GameLibs.zip" -DestinationPath "${{ env.GAMELIBS_DIR }}" -Force
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -101,6 +112,7 @@ jobs:
       - name: Build changed projects
         shell: pwsh
         run: |
+          $force = "${{ needs.detect-changes.outputs.force }}" -eq "true"
           $entries = '${{ needs.detect-changes.outputs.matrix }}' | ConvertFrom-Json
           $prevSha = git rev-parse HEAD~1 2>$null
 
@@ -113,13 +125,14 @@ jobs:
               if ($LASTEXITCODE -eq 0 -and $prevContent -match "<Version>([^<]+)</Version>") { $prevVersion = $Matches[1] }
             }
 
-            if ($prevVersion -eq $e.version) {
+            if (-not $force -and $prevVersion -eq $e.version) {
               Write-Host "== $($e.name): version unchanged, downloading previous build =="
               gh release download --repo "${{ github.repository }}" `
                 --pattern "$($e.name).dll" `
                 --output "artifacts\$($e.name).dll" `
                 --clobber
-              continue
+              if ($LASTEXITCODE -eq 0) { continue }
+              Write-Host "== No previous release found for $($e.name), building instead =="
             }
 
             Write-Host "== Building $($e.name) $($e.version) =="
