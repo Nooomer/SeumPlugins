@@ -49,7 +49,9 @@ jobs:
           )
 
           function Get-Version($content) {
-            if ($content -match "<Version>([^<]+)</Version>") { return $Matches[1] }
+            if ([string]::IsNullOrEmpty($content)) { return $null }
+            $m = [regex]::Match($content, "<Version>([^<]+)</Version>")
+            if ($m.Success) { return $m.Groups[1].Value }
             return $null
           }
 
@@ -63,7 +65,7 @@ jobs:
             $previous = $null
             if ($LASTEXITCODE -eq 0 -and $prevSha) {
               $prevContent = git show "${prevSha}:$($p.Path)" 2>$null
-              if ($LASTEXITCODE -eq 0) { $previous = Get-Version $prevContent }
+              if ($LASTEXITCODE -eq 0) { $previous = Get-Version ($prevContent -join "`n") }
             }
 
             $entry = [ordered]@{ name = $p.Name; path = $p.Path; version = $current }
@@ -112,6 +114,13 @@ jobs:
       - name: Build changed projects
         shell: pwsh
         run: |
+          function Get-Version($content) {
+            if ([string]::IsNullOrEmpty($content)) { return $null }
+            $m = [regex]::Match($content, "<Version>([^<]+)</Version>")
+            if ($m.Success) { return $m.Groups[1].Value }
+            return $null
+          }
+
           $force = "${{ needs.detect-changes.outputs.force }}" -eq "true"
           $entries = '${{ needs.detect-changes.outputs.matrix }}' | ConvertFrom-Json
           $prevSha = git rev-parse HEAD~1 2>$null
@@ -122,7 +131,7 @@ jobs:
             $prevVersion = $null
             if ($prevSha) {
               $prevContent = git show "${prevSha}:$($e.path)" 2>$null
-              if ($LASTEXITCODE -eq 0 -and $prevContent -match "<Version>([^<]+)</Version>") { $prevVersion = $Matches[1] }
+              if ($LASTEXITCODE -eq 0) { $prevVersion = Get-Version ($prevContent -join "`n") }
             }
 
             if (-not $force -and $prevVersion -eq $e.version) {
