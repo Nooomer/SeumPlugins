@@ -90,10 +90,9 @@ Discord Rich Presence для SEUM: показывает друзьям в Discor
 
 Проекты собираются под `net472` через SDK-style `.csproj` и зависят от
 управляемых сборок самой игры (`Assembly-CSharp.dll`,
-`Assembly-CSharp-firstpass.dll`, `Rewired_Core.dll`, `Newtonsoft.Json.dll` из
-BepInEx). Путь к ним задаётся MSBuild-свойством `GameManagedDir` (и
-`GameBepInExCoreDir` для `LiveScoreSender`), по умолчанию указывающим на
-локальную установку Steam:
+`Assembly-CSharp-firstpass.dll`, `Rewired_Core.dll`). Путь к ним задаётся
+MSBuild-свойством `GameManagedDir`, по умолчанию указывающим на локальную
+установку Steam:
 
 ```
 D:\SteamLibrary\steamapps\common\SEUM Speedrunners from Hell\Seum_Data\Managed

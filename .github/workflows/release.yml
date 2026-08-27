@@ -145,7 +145,7 @@ jobs:
             }
 
             Write-Host "== Building $($e.name) $($e.version) =="
-            dotnet build $e.path -c Release "/p:GameManagedDir=${{ env.GAMELIBS_DIR }}" "/p:GameBepInExCoreDir=${{ env.GAMELIBS_DIR }}"
+            dotnet build $e.path -c Release "/p:GameManagedDir=${{ env.GAMELIBS_DIR }}"
             if ($LASTEXITCODE -ne 0) { throw "Build failed for $($e.name)" }
 
             $dll = Get-ChildItem -Recurse -Path (Split-Path $e.path) -Filter "$($e.name).dll" |

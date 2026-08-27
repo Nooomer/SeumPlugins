@@ -14,7 +14,6 @@
     </RestoreAdditionalProjectSources>
     <RootNamespace>LiveScoreSender</RootNamespace>
     <GameManagedDir Condition="'$(GameManagedDir)' == ''">D:\SteamLibrary\steamapps\common\SEUM Speedrunners from Hell\Seum_Data\Managed</GameManagedDir>
-    <GameBepInExCoreDir Condition="'$(GameBepInExCoreDir)' == ''">D:\SteamLibrary\steamapps\common\SEUM Speedrunners from Hell\BepInEx\core</GameBepInExCoreDir>
   </PropertyGroup>
 
   <ItemGroup>
@@ -22,6 +21,10 @@
     <PackageReference Include="BepInEx.Core" Version="5.4.19" />
     <PackageReference Include="BepInEx.PluginInfoProps" Version="2.*" />
     <PackageReference Include="UnityEngine.Modules" Version="2018.3.7" IncludeAssets="compile" />
+    <!-- BepInEx уже несёт Newtonsoft.Json 13.0.2 в BepInEx/core и подхватывает
+         его в рантайме через свой assembly resolver, поэтому в сборку плагина
+         копировать эту сборку не нужно — только ссылка для компиляции. -->
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.2" ExcludeAssets="runtime" PrivateAssets="all" />
   </ItemGroup>
   
   <ItemGroup Condition="'$(TargetFramework.TrimEnd(`0123456789`))' == 'net'">
@@ -34,9 +37,6 @@
     </Reference>
     <Reference Include="Assembly-CSharp-firstpass">
       <HintPath>$(GameManagedDir)\Assembly-CSharp-firstpass.dll</HintPath>
-    </Reference>
-    <Reference Include="Newtonsoft.Json">
-      <HintPath>$(GameBepInExCoreDir)\Newtonsoft.Json.dll</HintPath>
     </Reference>
   </ItemGroup>
 </Project>
