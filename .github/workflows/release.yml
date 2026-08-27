@@ -1,0 +1,154 @@
+name: Build & release plugins
+
+# Собирает все BepInEx-плагины репозитория и публикует релиз с N DLL (по числу
+# csproj-проектов). Пересобирается только тот плагин, у которого в этом push
+# поменялась <Version> в csproj; DLL остальных плагинов переносятся без
+# изменений из предыдущего релиза, так что итоговый релиз всегда содержит
+# актуальный набор из всех плагинов.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "**/*.csproj"
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+env:
+  # Имя тега приватного релиза-кэша с DLL самой игры (см. README -> CI/CD).
+  GAMELIBS_RELEASE_TAG: gamelibs-cache
+  GAMELIBS_DIR: ${{ github.workspace }}\.gamelibs
+
+jobs:
+  detect-changes:
+    runs-on: windows-latest
+    outputs:
+      matrix: ${{ steps.diff.outputs.matrix }}
+      any_changed: ${{ steps.diff.outputs.any_changed }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect version bumps per project
+        id: diff
+        shell: pwsh
+        run: |
+          $projects = @(
+            @{ Name = "VelocityMeter";  Path = "VelocityMeter/VelocityMeter.csproj" },
+            @{ Name = "SeumDiscordRPC"; Path = "SeumDiscordRPC/SeumDiscordRPC.csproj" },
+            @{ Name = "LiveScoreSender";Path = "LiveScoreSender/LiveScoreSender.csproj" }
+          )
+
+          function Get-Version($content) {
+            if ($content -match "<Version>([^<]+)</Version>") { return $Matches[1] }
+            return $null
+          }
+
+          $prevSha = git rev-parse HEAD~1 2>$null
+          $changed = @()
+          $all = @()
+
+          foreach ($p in $projects) {
+            $current = Get-Version (Get-Content $p.Path -Raw)
+            $previous = $null
+            if ($LASTEXITCODE -eq 0 -and $prevSha) {
+              $prevContent = git show "${prevSha}:$($p.Path)" 2>$null
+              if ($LASTEXITCODE -eq 0) { $previous = Get-Version $prevContent }
+            }
+
+            $entry = [ordered]@{ name = $p.Name; path = $p.Path; version = $current }
+            $all += $entry
+
+            if ($previous -ne $current) {
+              Write-Host "$($p.Name): $previous -> $current (rebuild)"
+              $changed += $entry
+            } else {
+              Write-Host "$($p.Name): $current (unchanged, reuse previous artifact)"
+            }
+          }
+
+          $matrixJson = ($all | ConvertTo-Json -Compress -AsArray)
+          "matrix=$matrixJson" >> $env:GITHUB_OUTPUT
+          "any_changed=$($changed.Count -gt 0)" >> $env:GITHUB_OUTPUT
+
+  build:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.any_changed == 'true'
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Fetch game reference DLLs (private cache)
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path "${{ env.GAMELIBS_DIR }}" | Out-Null
+          gh release download "${{ env.GAMELIBS_RELEASE_TAG }}" `
+            --repo "${{ github.repository }}" `
+            --pattern "GameLibs.zip" `
+            --output "${{ runner.temp }}\GameLibs.zip" `
+            --clobber
+          Expand-Archive -Path "${{ runner.temp }}\GameLibs.zip" -DestinationPath "${{ env.GAMELIBS_DIR }}" -Force
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build changed projects
+        shell: pwsh
+        run: |
+          $entries = '${{ needs.detect-changes.outputs.matrix }}' | ConvertFrom-Json
+          $prevSha = git rev-parse HEAD~1 2>$null
+
+          New-Item -ItemType Directory -Force -Path "artifacts" | Out-Null
+
+          foreach ($e in $entries) {
+            $prevVersion = $null
+            if ($prevSha) {
+              $prevContent = git show "${prevSha}:$($e.path)" 2>$null
+              if ($LASTEXITCODE -eq 0 -and $prevContent -match "<Version>([^<]+)</Version>") { $prevVersion = $Matches[1] }
+            }
+
+            if ($prevVersion -eq $e.version) {
+              Write-Host "== $($e.name): version unchanged, downloading previous build =="
+              gh release download --repo "${{ github.repository }}" `
+                --pattern "$($e.name).dll" `
+                --output "artifacts\$($e.name).dll" `
+                --clobber
+              continue
+            }
+
+            Write-Host "== Building $($e.name) $($e.version) =="
+            dotnet build $e.path -c Release "/p:GameManagedDir=${{ env.GAMELIBS_DIR }}" "/p:GameBepInExCoreDir=${{ env.GAMELIBS_DIR }}"
+            if ($LASTEXITCODE -ne 0) { throw "Build failed for $($e.name)" }
+
+            $dll = Get-ChildItem -Recurse -Path (Split-Path $e.path) -Filter "$($e.name).dll" |
+              Where-Object { $_.FullName -match "\\bin\\Release\\" } |
+              Select-Object -First 1
+            Copy-Item $dll.FullName "artifacts\$($e.name).dll" -Force
+          }
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build release notes
+        id: notes
+        shell: pwsh
+        run: |
+          $entries = '${{ needs.detect-changes.outputs.matrix }}' | ConvertFrom-Json
+          $lines = $entries | ForEach-Object { "- $($_.name): $($_.version)" }
+          $body = $lines -join "`n"
+          $tag = "release-$($env:GITHUB_RUN_NUMBER)"
+          "tag=$tag" >> $env:GITHUB_OUTPUT
+          $body | Out-File -FilePath notes.md -Encoding utf8
+
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.notes.outputs.tag }}
+          name: ${{ steps.notes.outputs.tag }}
+          body_path: notes.md
+          files: artifacts/*.dll

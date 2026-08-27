@@ -1,1 +1,88 @@
 # SeumPlugins
+
+Набор [BepInEx](https://github.com/BepInEx/BepInEx)-плагинов для игры **SEUM: Speedrunners from Hell**.
+
+## Плагины
+
+### VelocityMeter
+
+Портирует и расширяет оригинальный мод отображения скорости для SEUM.
+Показывает текущую горизонтальную/вертикальную скорость игрока и связанную
+статистику во время игры и при просмотре реплеев.
+
+Базовая функциональность (счётчик скорости, оверлей, режимы отображения)
+соответствует оригинальному моду — подробное описание всех настроек и
+возможностей см. на его странице:
+**https://link-seum.github.io/velocitymeter/index.html**
+
+Новое в этой версии (добавлено RSC — **Russian Seum Community**, https://seum.online/):
+- визуализация траектории (trail) пройденного пути во время просмотра реплея;
+- расчёт и подсветка пиковых значений скорости (speed peaks) по кадрам реплея;
+- отдельный оверлей ввода/статистики для анализа заездов из реплея.
+
+### SeumDiscordRPC
+
+Discord Rich Presence для SEUM: показывает друзьям в Discord, во что вы сейчас
+играете (текущий уровень/сцена и т.д.), используя Discord Game SDK.
+
+### LiveScoreSender
+
+Отправляет новые личные рекорды (PB) игрока в реальном времени на бэкенд
+**RSC** (https://seum.online/) сразу после установки рекорда, с очередью и
+повторными попытками отправки при сбоях сети — рекорды не теряются, даже если
+сервер временно недоступен.
+
+## Сборка
+
+Проекты собираются под `net472` через SDK-style `.csproj` и зависят от
+управляемых сборок самой игры (`Assembly-CSharp.dll`,
+`Assembly-CSharp-firstpass.dll`, `Rewired_Core.dll`, `Newtonsoft.Json.dll` из
+BepInEx). Путь к ним задаётся MSBuild-свойством `GameManagedDir` (и
+`GameBepInExCoreDir` для `LiveScoreSender`), по умолчанию указывающим на
+локальную установку Steam:
+
+```
+D:\SteamLibrary\steamapps\common\SEUM Speedrunners from Hell\Seum_Data\Managed
+```
+
+Для сборки с другим путём (например, в CI):
+
+```bash
+dotnet build VelocityMeter/VelocityMeter.csproj -c Release /p:GameManagedDir="<путь до Managed>"
+```
+
+## CI/CD
+
+При каждом изменении `<Version>` в одном из `.csproj` на ветке `main`
+запускается [`.github/workflows/release.yml`](.github/workflows/release.yml),
+который:
+
+1. Определяет, у каких из проектов (`VelocityMeter`, `SeumDiscordRPC`,
+   `LiveScoreSender`) версия действительно изменилась по сравнению с
+   предыдущим коммитом.
+2. Пересобирает **только** изменившиеся проекты.
+3. Для проектов без изменений версии — переиспользует DLL из предыдущего
+   релиза (без пересборки).
+4. Публикует GitHub Release, в который всегда попадают **все N DLL**
+   (по числу проектов) — свежесобранные и перенесённые из предыдущего релиза.
+
+### Одноразовая настройка (DLL самой игры)
+
+Управляемые сборки игры не хранятся в репозитории (это код игры, а не
+плагинов) и не могут быть получены обычным раннером GitHub Actions. Поэтому
+они лежат отдельным приватным кэшем — asset-архивом `GameLibs.zip` в
+специальном GitHub Release с тегом `gamelibs-cache` в этом же репозитории;
+workflow скачивает его перед сборкой через `GITHUB_TOKEN`.
+
+Создать/обновить кэш (один раз или при обновлении игры):
+
+```bash
+gh release create gamelibs-cache GameLibs.zip \
+  --repo Nooomer/SeumPlugins \
+  --title "Game reference libraries (private cache)" \
+  --notes "Assembly-CSharp.dll, Assembly-CSharp-firstpass.dll, Rewired_Core.dll — служебный кэш для CI, не публичный релиз плагинов." \
+  --prerelease
+```
+
+где `GameLibs.zip` содержит `Assembly-CSharp.dll`, `Assembly-CSharp-firstpass.dll`
+и `Rewired_Core.dll` из `Seum_Data/Managed` установленной игры.

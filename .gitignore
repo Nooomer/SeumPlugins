@@ -361,3 +361,8 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
+
+# Decompiled IL dumps (large, regenerated locally, not needed in the repo)
+*.il
+Assembly-CSharp*.res
+dll-il/

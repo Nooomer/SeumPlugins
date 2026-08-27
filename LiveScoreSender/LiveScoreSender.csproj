@@ -13,6 +13,8 @@
       https://nuget.samboy.dev/v3/index.json
     </RestoreAdditionalProjectSources>
     <RootNamespace>LiveScoreSender</RootNamespace>
+    <GameManagedDir Condition="'$(GameManagedDir)' == ''">D:\SteamLibrary\steamapps\common\SEUM Speedrunners from Hell\Seum_Data\Managed</GameManagedDir>
+    <GameBepInExCoreDir Condition="'$(GameBepInExCoreDir)' == ''">D:\SteamLibrary\steamapps\common\SEUM Speedrunners from Hell\BepInEx\core</GameBepInExCoreDir>
   </PropertyGroup>
 
   <ItemGroup>
@@ -28,13 +30,13 @@
   
   <ItemGroup>
     <Reference Include="Assembly-CSharp">
-      <HintPath>D:\SteamLibrary\steamapps\common\SEUM Speedrunners from Hell\Seum_Data\Managed\Assembly-CSharp.dll</HintPath>
+      <HintPath>$(GameManagedDir)\Assembly-CSharp.dll</HintPath>
     </Reference>
     <Reference Include="Assembly-CSharp-firstpass">
-      <HintPath>D:\SteamLibrary\steamapps\common\SEUM Speedrunners from Hell\Seum_Data\Managed\Assembly-CSharp-firstpass.dll</HintPath>
+      <HintPath>$(GameManagedDir)\Assembly-CSharp-firstpass.dll</HintPath>
     </Reference>
     <Reference Include="Newtonsoft.Json">
-      <HintPath>D:\SteamLibrary\steamapps\common\SEUM Speedrunners from Hell\BepInEx\core\Newtonsoft.Json.dll</HintPath>
+      <HintPath>$(GameBepInExCoreDir)\Newtonsoft.Json.dll</HintPath>
     </Reference>
   </ItemGroup>
 </Project>
