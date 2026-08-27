@@ -1,0 +1,5 @@
+<Solution>
+  <Project Path="VelocityMeter/VelocityMeter.csproj" />
+  <Project Path="SeumDiscordRPC/SeumDiscordRPC.csproj" />
+  <Project Path="LiveScoreSender/LiveScoreSender.csproj" />
+</Solution>
