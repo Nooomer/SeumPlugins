@@ -15,6 +15,7 @@ namespace SeumSteamOpt
         // --- leaderboards ------------------------------------------------------------------
         internal static ConfigEntry<bool> CacheLeaderboardHandles;
         internal static ConfigEntry<bool> RefreshOnlyVisibleSpeedrunBoard;
+        internal static ConfigEntry<bool> SkipDuplicateInFlightRequests;
         internal static ConfigEntry<float> RefreshCooldownSeconds;
 
         // --- friends -----------------------------------------------------------------------
@@ -53,16 +54,24 @@ namespace SeumSteamOpt
                 + "second timer, plus immediately whenever the selection changes, so what is on "
                 + "screen is exactly as fresh as vanilla and 29 boards of traffic disappear.");
 
-            RefreshCooldownSeconds = cfg.Bind("02 - Leaderboards", "RefreshCooldownSeconds", 5f,
+            SkipDuplicateInFlightRequests = cfg.Bind("02 - Leaderboards", "SkipDuplicateInFlightRequests", true,
+                "Drops a leaderboard download when an identical one is still on the wire - the game "
+                + "queues the same board again on every zone change and every level start without "
+                + "checking whether the previous batch has come back. This cannot make anything "
+                + "staler, because the answer it would have waited for is already coming, so unlike "
+                + "RefreshCooldownSeconds it costs no freshness at all.");
+
+            RefreshCooldownSeconds = cfg.Bind("02 - Leaderboards", "RefreshCooldownSeconds", 0f,
                 new ConfigDescription(
-                    "Minimum time between two downloads of the same leaderboard. The default matches "
-                    + "the game's own 5 second refresh timer, so nothing on screen gets staler than "
-                    + "vanilla already allows - it only collapses bursts the timer never intended, "
-                    + "like spinning the level selector through the same zone twice or restarting a "
-                    + "level within 5 seconds. Raising it trades freshness for traffic: at 30, a rival's "
-                    + "new score can take up to 30 seconds to appear. Your own new record is never "
-                    + "affected - a successful upload re-downloads directly, bypassing this cooldown. "
-                    + "Set to 0 to disable the cooldown entirely.",
+                    "Extra minimum time between two downloads of the same leaderboard, on top of the "
+                    + "in-flight dedup above. Off by default because it is the one setting here that "
+                    + "genuinely delays data: at 30, a rival's new score can take up to 30 seconds to "
+                    + "appear. Keep it below the game's own 5 second refresh timer or it will start "
+                    + "eating scheduled refreshes as the two timers drift in and out of phase. It is "
+                    + "cleared on every scene load, so a mod that applies a setting by reloading the "
+                    + "level - VelocityMeter's leaderboard range editor does exactly that - still gets "
+                    + "its fresh download. Your own new record is never affected either: a successful "
+                    + "upload re-downloads directly, bypassing this path.",
                     new AcceptableValueRange<float>(0f, 600f)));
 
             CachePersonaNames = cfg.Bind("03 - Friends", "CachePersonaNames", true,

@@ -1,6 +1,7 @@
 using System;
 using Steamworks;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 namespace SeumSteamOpt
 {
@@ -38,6 +39,27 @@ namespace SeumSteamOpt
             GameObject host = new GameObject("SeumSteamOpt");
             DontDestroyOnLoad(host);
             instance = host.AddComponent<SteamOptRuntime>();
+        }
+
+        private void OnEnable()
+        {
+            SceneManager.sceneLoaded += OnSceneLoaded;
+        }
+
+        private void OnDisable()
+        {
+            SceneManager.sceneLoaded -= OnSceneLoaded;
+        }
+
+        /// <summary>
+        /// A scene load means the player has arrived somewhere new, so the refresh that follows is a
+        /// first look rather than a repeat and must not be deduped away. VelocityMeter's leaderboard
+        /// range editor depends on this: it applies a new range by reloading the Game scene, and the
+        /// range only takes effect on the download that reload triggers.
+        /// </summary>
+        private static void OnSceneLoaded(Scene scene, LoadSceneMode mode)
+        {
+            LeaderboardPatches.OnSceneChanged();
         }
 
         private void Update()

@@ -29,6 +29,15 @@ namespace SeumSteamOpt
         private static readonly Dictionary<string, float> LastRequest =
             new Dictionary<string, float>(128);
 
+        /// <summary>
+        /// Boards already refreshed since the last scene load. Guarded by the same lock as
+        /// <see cref="LastRequest"/> - the two are always read and written together.
+        /// </summary>
+        private static readonly HashSet<string> FirstInScene = new HashSet<string>(StringComparer.Ordinal);
+
+        private static readonly FieldInfo DownloadRequestsField =
+            AccessTools.Field(typeof(LeaderboardsSteamBackend), "downloadRequests");
+
         private static MethodInfo downloadLeaderboardName;
         private static MethodInfo downloadEntries;
         private static MethodInfo uploadLeaderboardName;
@@ -70,7 +79,8 @@ namespace SeumSteamOpt
                 }
             }
 
-            if (SteamOptConfig.RefreshCooldownSeconds.Value > 0f)
+            if (SteamOptConfig.SkipDuplicateInFlightRequests.Value
+                || SteamOptConfig.RefreshCooldownSeconds.Value > 0f)
             {
                 Patcher.Patch(harmony, self, typeof(LeaderboardsSteamBackend), "downloadScore",
                     prefix: nameof(DownloadScorePrefix));
@@ -184,17 +194,38 @@ namespace SeumSteamOpt
             }
         }
 
-        // ------------------------------------------------------------------- refresh cooldown
+        // ---------------------------------------------------------------------- request dedup
 
         private static bool DownloadScorePrefix(ulong leaderboardId, string leaderboardPrefix)
         {
-            return AllowRefresh(leaderboardPrefix + "|" + leaderboardId);
+            return AllowRefresh(leaderboardPrefix + "|" + leaderboardId,
+                leaderboardPrefix, leaderboardId, 0UL);
         }
 
         private static bool DownloadScoreWorkshopPrefix(ulong leaderboardId, ulong leaderboardRev,
             string leaderboardPrefix)
         {
-            return AllowRefresh(leaderboardPrefix + "|" + leaderboardId + "|" + leaderboardRev);
+            return AllowRefresh(leaderboardPrefix + "|" + leaderboardId + "|" + leaderboardRev,
+                leaderboardPrefix, leaderboardId, leaderboardRev);
+        }
+
+        /// <summary>
+        /// A scene load resets both halves of the dedup, so the first refresh of any given board in
+        /// the new scene always reaches Steam - it is a first look, not a repeat.
+        ///
+        /// This is not just tidiness. VelocityMeter's leaderboard range editor applies a new range by
+        /// setting PluginState.NumberStartS and then calling SceneManager.LoadScene("Game"), and the
+        /// range is only ever picked up by a real DownloadLeaderboardEntries call. Whichever half of
+        /// the dedup swallowed the refresh that the reload triggers, the range would silently fail to
+        /// change - which is exactly what it looked like before this existed.
+        /// </summary>
+        internal static void OnSceneChanged()
+        {
+            lock (LastRequest)
+            {
+                LastRequest.Clear();
+                FirstInScene.Clear();
+            }
         }
 
         /// <summary>
@@ -207,8 +238,27 @@ namespace SeumSteamOpt
         /// SteamDownloadRequests directly instead of going through downloadScore, so a fresh
         /// personal best still appears immediately.
         /// </summary>
-        private static bool AllowRefresh(string key)
+        private static bool AllowRefresh(string key, string prefix, ulong id, ulong rev)
         {
+            lock (LastRequest)
+            {
+                // The first look at a board in a new scene is never a duplicate of anything.
+                if (FirstInScene.Add(key))
+                {
+                    LastRequest[key] = Clock.Now;
+                    return true;
+                }
+            }
+
+            // Dropping a request while the identical one is still on the wire cannot make anything
+            // staler - the answer is already coming. This is the safe half of the dedup and is why
+            // the time-based cooldown below can stay off by default.
+            if (SteamOptConfig.SkipDuplicateInFlightRequests.Value && IsInFlight(prefix, id, rev))
+            {
+                Counters.Add(ref Counters.LeaderboardDownloads, 3);
+                return false;
+            }
+
             float cooldown = SteamOptConfig.RefreshCooldownSeconds.Value;
             if (cooldown <= 0f)
             {
@@ -229,6 +279,48 @@ namespace SeumSteamOpt
             }
 
             return true;
+        }
+
+        /// <summary>
+        /// True while an unfinished SteamDownloadRequest for this board is already queued. The game
+        /// keeps them in a private list and only marks finished from the Steam callback, so this is
+        /// an exact "the answer is already on its way" test rather than a guess from a timer.
+        /// </summary>
+        private static bool IsInFlight(string prefix, ulong id, ulong rev)
+        {
+            if (DownloadRequestsField == null)
+            {
+                return false;
+            }
+
+            try
+            {
+                List<SteamDownloadRequest> requests =
+                    DownloadRequestsField.GetValue(null) as List<SteamDownloadRequest>;
+                if (requests == null)
+                {
+                    return false;
+                }
+
+                for (int i = 0; i < requests.Count; i++)
+                {
+                    SteamDownloadRequest request = requests[i];
+                    if (request != null
+                        && !request.finished
+                        && request.leaderboardId == id
+                        && request.leaderboardRev == rev
+                        && request.leaderboardPrefix == prefix)
+                    {
+                        return true;
+                    }
+                }
+            }
+            catch (Exception)
+            {
+                // Not knowing means "let it through".
+            }
+
+            return false;
         }
     }
 }
