@@ -6,4 +6,5 @@
   <Project Path="SeumReplay/SeumReplay.csproj" />
   <Project Path="SeumSteamOpt/SeumSteamOpt.csproj" />
   <Project Path="SeumInput/SeumInput.csproj" />
+  <Project Path="SeumFreeCam/SeumFreeCam.csproj" />
 </Solution>

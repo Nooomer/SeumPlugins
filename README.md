@@ -101,7 +101,25 @@
 
 Подробности — [SeumReplay/README.md](SeumReplay/README.md).
 
-> У SeumPerf, SeumInput, SeumSteamOpt и SeumReplay есть свой файл настроек
+### SeumFreeCam — камера со стороны в реплее
+
+Во время просмотра реплея по клавише **F** камера отцепляется от бегущего, и
+вокруг забега можно свободно летать (`WASD` + мышь, `E`/`Q` — вверх/вниз,
+`Shift`/`Alt` — быстрее/медленнее, колесо — базовая скорость, `C` — вернуться к
+бегущему). На месте игрока рисуется полупрозрачная капсула, иначе его не видно:
+игра от первого лица и модели персонажа не содержит.
+
+Пока камера отцеплена, рестарт уровня по `R` не срабатывает — иначе он разобрал
+бы реплей прямо под камерой. Вернулись по `F` — и `R` снова работает как обычно.
+
+Забег при этом идёт как обычно — реплей в SEUM это не видеозапись, а
+воспроизведение самой игры, поэтому камера ни на что не влияет. Хорошо
+сочетается с паузой и покадровым шагом из SeumReplay: можно остановить момент и
+обойти его со всех сторон.
+
+Подробности — [SeumFreeCam/README.md](SeumFreeCam/README.md).
+
+> У SeumPerf, SeumInput, SeumSteamOpt, SeumReplay и SeumFreeCam есть свой файл настроек
 > (`BepInEx/config/<Имя плагина>.cfg`) — он создаётся автоматически при
 > первом запуске плагина, менять его руками до этого не нужно. Пример
 > файла со всеми параметрами и их описанием — в README самого плагина.
@@ -135,7 +153,7 @@
 
 Скачайте нужные `.dll` (`VelocityMeter.dll`, `SeumDiscordRPC.dll`,
 `LiveScoreSender.dll`, `SeumPerf.dll`, `SeumInput.dll`, `SeumSteamOpt.dll`,
-`SeumReplay.dll` —
+`SeumReplay.dll`, `SeumFreeCam.dll` —
 можно ставить как все сразу, так и по отдельности) и положите их в папку
 
 ```
@@ -179,7 +197,8 @@ dotnet build VelocityMeter/VelocityMeter.csproj -c Release /p:GameManagedDir="<�
 который:
 
 1. Определяет, у каких из проектов (`VelocityMeter`, `SeumDiscordRPC`,
-   `LiveScoreSender`, `SeumPerf`, `SeumInput`, `SeumSteamOpt`, `SeumReplay`)
+   `LiveScoreSender`, `SeumPerf`, `SeumInput`, `SeumSteamOpt`, `SeumReplay`,
+   `SeumFreeCam`)
    версия действительно изменилась по сравнению с предыдущим коммитом.
 2. Пересобирает **только** изменившиеся проекты.
 3. Для проектов без изменений версии — переиспользует DLL из предыдущего
