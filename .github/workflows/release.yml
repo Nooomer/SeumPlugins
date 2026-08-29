@@ -45,7 +45,11 @@ jobs:
           $projects = @(
             @{ Name = "VelocityMeter";  Path = "VelocityMeter/VelocityMeter.csproj" },
             @{ Name = "SeumDiscordRPC"; Path = "SeumDiscordRPC/SeumDiscordRPC.csproj" },
-            @{ Name = "LiveScoreSender";Path = "LiveScoreSender/LiveScoreSender.csproj" }
+            @{ Name = "LiveScoreSender";Path = "LiveScoreSender/LiveScoreSender.csproj" },
+            @{ Name = "SeumPerf";       Path = "SeumPerf/SeumPerf.csproj" },
+            @{ Name = "SeumInput";      Path = "SeumInput/SeumInput.csproj" },
+            @{ Name = "SeumSteamOpt";   Path = "SeumSteamOpt/SeumSteamOpt.csproj" },
+            @{ Name = "SeumReplay";     Path = "SeumReplay/SeumReplay.csproj" }
           )
 
           function Get-Version($content) {

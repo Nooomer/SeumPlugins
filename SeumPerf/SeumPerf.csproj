@@ -1,10 +1,11 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net472</TargetFramework>
-    <AssemblyName>LiveScoreSender</AssemblyName>
-    <Product>Live score sender with retry</Product>
-    <Version>1.0.1</Version>
+    <AssemblyName>SeumPerf</AssemblyName>
+    <Product>SeumPerf</Product>
+    <Description>Performance patches for SEUM — Speedrunners from Hell.</Description>
+    <Version>1.0.0</Version>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <LangVersion>latest</LangVersion>
     <RestoreAdditionalProjectSources>
@@ -12,7 +13,7 @@
       https://nuget.bepinex.dev/v3/index.json;
       https://nuget.samboy.dev/v3/index.json
     </RestoreAdditionalProjectSources>
-    <RootNamespace>LiveScoreSender</RootNamespace>
+    <RootNamespace>SeumPerf</RootNamespace>
     <GameManagedDir Condition="'$(GameManagedDir)' == ''">D:\SteamLibrary\steamapps\common\SEUM Speedrunners from Hell\Seum_Data\Managed</GameManagedDir>
   </PropertyGroup>
 
@@ -21,16 +22,12 @@
     <PackageReference Include="BepInEx.Core" Version="5.4.19" />
     <PackageReference Include="BepInEx.PluginInfoProps" Version="2.*" />
     <PackageReference Include="UnityEngine.Modules" Version="2018.3.7" IncludeAssets="compile" />
-    <!-- BepInEx уже несёт Newtonsoft.Json 13.0.2 в BepInEx/core и подхватывает
-         его в рантайме через свой assembly resolver, поэтому в сборку плагина
-         копировать эту сборку не нужно — только ссылка для компиляции. -->
-    <PackageReference Include="Newtonsoft.Json" Version="13.0.2" ExcludeAssets="runtime" PrivateAssets="all" />
   </ItemGroup>
-  
+
   <ItemGroup Condition="'$(TargetFramework.TrimEnd(`0123456789`))' == 'net'">
     <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.2" PrivateAssets="all" />
   </ItemGroup>
-  
+
   <ItemGroup>
     <Reference Include="Assembly-CSharp">
       <HintPath>$(GameManagedDir)\Assembly-CSharp.dll</HintPath>

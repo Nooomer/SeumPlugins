@@ -2,4 +2,8 @@
   <Project Path="VelocityMeter/VelocityMeter.csproj" />
   <Project Path="SeumDiscordRPC/SeumDiscordRPC.csproj" />
   <Project Path="LiveScoreSender/LiveScoreSender.csproj" />
+  <Project Path="SeumPerf/SeumPerf.csproj" />
+  <Project Path="SeumReplay/SeumReplay.csproj" />
+  <Project Path="SeumSteamOpt/SeumSteamOpt.csproj" />
+  <Project Path="SeumInput/SeumInput.csproj" />
 </Solution>
