@@ -28,6 +28,7 @@ namespace SeumSteamOpt
 
             Harmony harmony = HarmonyInstance = new Harmony(MyPluginInfo.PLUGIN_GUID);
             LeaderboardPatches.Apply(harmony);
+            SpeedrunSelectorPatches.Apply(harmony);
             FriendsPatches.Apply(harmony);
             AchievementPatches.Apply(harmony);
             WorkshopPatches.Apply(harmony);

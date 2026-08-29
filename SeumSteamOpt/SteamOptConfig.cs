@@ -14,6 +14,7 @@ namespace SeumSteamOpt
 
         // --- leaderboards ------------------------------------------------------------------
         internal static ConfigEntry<bool> CacheLeaderboardHandles;
+        internal static ConfigEntry<bool> RefreshOnlyVisibleSpeedrunBoard;
         internal static ConfigEntry<float> RefreshCooldownSeconds;
 
         // --- friends -----------------------------------------------------------------------
@@ -25,6 +26,8 @@ namespace SeumSteamOpt
 
         // --- workshop ----------------------------------------------------------------------
         internal static ConfigEntry<float> ItemStateCacheSeconds;
+        internal static ConfigEntry<bool> DeferWorkshopStartup;
+        internal static ConfigEntry<bool> SkipEmptyUserMapQuery;
 
         // --- diagnostics -------------------------------------------------------------------
         internal static ConfigEntry<float> StatsLogInterval;
@@ -42,14 +45,24 @@ namespace SeumSteamOpt
                 + "removes one Steam round trip from every single leaderboard read - half of all "
                 + "leaderboard traffic after the first look at a given board.");
 
-            RefreshCooldownSeconds = cfg.Bind("02 - Leaderboards", "RefreshCooldownSeconds", 30f,
+            RefreshOnlyVisibleSpeedrunBoard = cfg.Bind("02 - Leaderboards", "RefreshOnlyVisibleSpeedrunBoard", true,
+                "The speedrun selector re-downloads 30 leaderboards every 5 seconds - full game and "
+                + "every zone, each in a with-beers and a without-beers variant - but the screen only "
+                + "ever draws one of them, the one for the currently selected mode. The other 29 are "
+                + "fetched and never read. This refreshes the selected board only, on the same 5 "
+                + "second timer, plus immediately whenever the selection changes, so what is on "
+                + "screen is exactly as fresh as vanilla and 29 boards of traffic disappear.");
+
+            RefreshCooldownSeconds = cfg.Bind("02 - Leaderboards", "RefreshCooldownSeconds", 5f,
                 new ConfigDescription(
-                    "Minimum time between two downloads of the same leaderboard. Vanilla re-downloads "
-                    + "on a fixed 5 second timer with no regard for how many boards that is: the "
-                    + "speedrun selector alone refreshes 30 boards (90 requests) every 5 seconds, and "
-                    + "an in-level HUD refreshes 3. Your own new record is still shown immediately - "
-                    + "a successful upload re-downloads directly and does not go through this "
-                    + "cooldown. Set to 0 to keep vanilla behaviour.",
+                    "Minimum time between two downloads of the same leaderboard. The default matches "
+                    + "the game's own 5 second refresh timer, so nothing on screen gets staler than "
+                    + "vanilla already allows - it only collapses bursts the timer never intended, "
+                    + "like spinning the level selector through the same zone twice or restarting a "
+                    + "level within 5 seconds. Raising it trades freshness for traffic: at 30, a rival's "
+                    + "new score can take up to 30 seconds to appear. Your own new record is never "
+                    + "affected - a successful upload re-downloads directly, bypassing this cooldown. "
+                    + "Set to 0 to disable the cooldown entirely.",
                     new AcceptableValueRange<float>(0f, 600f)));
 
             CachePersonaNames = cfg.Bind("03 - Friends", "CachePersonaNames", true,
@@ -80,6 +93,20 @@ namespace SeumSteamOpt
                     + "callback, and those clear this cache immediately, so polling faster than this "
                     + "buys nothing. Set to 0 to keep vanilla behaviour.",
                     new AcceptableValueRange<float>(0f, 60f)));
+
+            DeferWorkshopStartup = cfg.Bind("05 - Workshop", "DeferWorkshopStartup", true,
+                "Entering the main menu loads the whole workshop library whether or not you open the "
+                + "workshop screen: a UGC details query for every subscribed map, and then, per map, "
+                + "an HTTP download of its preview image plus a GetUserItemVote and a "
+                + "GetAppDependencies call. Nothing outside the workshop screen reads any of it. This "
+                + "holds that work back until the screen is actually opened. The cost is a short load "
+                + "the first time you open the workshop in a session.");
+
+            SkipEmptyUserMapQuery = cfg.Bind("05 - Workshop", "SkipEmptyUserMapQuery", true,
+                "checkIfUserMapsArePublished runs on every return to the main menu and sends a UGC "
+                + "query built from the maps you authored locally. If you have not authored any - "
+                + "which is the case for everyone who does not use the level editor - the query "
+                + "carries zero ids and can never return anything. This skips it.");
 
             StatsLogInterval = cfg.Bind("06 - Diagnostics", "StatsLogInterval", 0f,
                 new ConfigDescription(

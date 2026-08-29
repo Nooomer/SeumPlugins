@@ -5,7 +5,7 @@
     <AssemblyName>SeumSteamOpt</AssemblyName>
     <Product>SeumSteamOpt</Product>
     <Description>Cuts the number of Steam API calls SEUM makes — Speedrunners from Hell.</Description>
-    <Version>1.0.0</Version>
+    <Version>1.1.0</Version>
     <LangVersion>latest</LangVersion>
     <RestoreAdditionalProjectSources>
       https://api.nuget.org/v3/index.json;
