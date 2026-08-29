@@ -8,7 +8,7 @@ name: Build & release plugins
 
 on:
   push:
-    branches: [main]
+    branches: [master]
     paths:
       - "**/*.csproj"
   workflow_dispatch:
@@ -61,15 +61,22 @@ jobs:
 
           $force = "${{ github.event_name == 'workflow_dispatch' && inputs.force }}" -eq "true"
           $prevSha = git rev-parse HEAD~1 2>$null
+          $global:LASTEXITCODE = 0
           $changed = @()
           $all = @()
 
           foreach ($p in $projects) {
             $current = Get-Version (Get-Content $p.Path -Raw)
             $previous = $null
-            if ($LASTEXITCODE -eq 0 -and $prevSha) {
+            if ($prevSha) {
+              # A project added in this same push has no HEAD~1 blob to diff against - that is a
+              # normal "does not exist yet", not a script failure, so always clear LASTEXITCODE
+              # right after the call instead of letting a non-zero git exit code linger to the end
+              # of the script (pwsh in Actions fails the step on that, even though we handle it here).
               $prevContent = git show "${prevSha}:$($p.Path)" 2>$null
-              if ($LASTEXITCODE -eq 0) { $previous = Get-Version ($prevContent -join "`n") }
+              $found = $LASTEXITCODE -eq 0
+              $global:LASTEXITCODE = 0
+              if ($found) { $previous = Get-Version ($prevContent -join "`n") }
             }
 
             $entry = [ordered]@{ name = $p.Name; path = $p.Path; version = $current }
@@ -87,6 +94,7 @@ jobs:
           "matrix=$matrixJson" >> $env:GITHUB_OUTPUT
           "any_changed=$($changed.Count -gt 0)" >> $env:GITHUB_OUTPUT
           "force=$force" >> $env:GITHUB_OUTPUT
+          exit 0
 
   build:
     needs: detect-changes
@@ -128,14 +136,19 @@ jobs:
           $force = "${{ needs.detect-changes.outputs.force }}" -eq "true"
           $entries = '${{ needs.detect-changes.outputs.matrix }}' | ConvertFrom-Json
           $prevSha = git rev-parse HEAD~1 2>$null
+          $global:LASTEXITCODE = 0
 
           New-Item -ItemType Directory -Force -Path "artifacts" | Out-Null
 
           foreach ($e in $entries) {
             $prevVersion = $null
             if ($prevSha) {
+              # A project added in this same push has no HEAD~1 blob - "not found" is expected here,
+              # not a script failure, so clear LASTEXITCODE right away instead of letting it linger.
               $prevContent = git show "${prevSha}:$($e.path)" 2>$null
-              if ($LASTEXITCODE -eq 0) { $prevVersion = Get-Version ($prevContent -join "`n") }
+              $found = $LASTEXITCODE -eq 0
+              $global:LASTEXITCODE = 0
+              if ($found) { $prevVersion = Get-Version ($prevContent -join "`n") }
             }
 
             if (-not $force -and $prevVersion -eq $e.version) {
@@ -144,7 +157,9 @@ jobs:
                 --pattern "$($e.name).dll" `
                 --output "artifacts\$($e.name).dll" `
                 --clobber
-              if ($LASTEXITCODE -eq 0) { continue }
+              $downloaded = $LASTEXITCODE -eq 0
+              $global:LASTEXITCODE = 0
+              if ($downloaded) { continue }
               Write-Host "== No previous release found for $($e.name), building instead =="
             }
 
@@ -157,6 +172,7 @@ jobs:
               Select-Object -First 1
             Copy-Item $dll.FullName "artifacts\$($e.name).dll" -Force
           }
+          exit 0
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

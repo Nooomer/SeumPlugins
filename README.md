@@ -171,13 +171,13 @@ dotnet build VelocityMeter/VelocityMeter.csproj -c Release /p:GameManagedDir="<�
 
 ## CI/CD
 
-При каждом изменении `<Version>` в одном из `.csproj` на ветке `main`
+При каждом изменении `<Version>` в одном из `.csproj` на ветке `master`
 запускается [`.github/workflows/release.yml`](.github/workflows/release.yml),
 который:
 
 1. Определяет, у каких из проектов (`VelocityMeter`, `SeumDiscordRPC`,
-   `LiveScoreSender`) версия действительно изменилась по сравнению с
-   предыдущим коммитом.
+   `LiveScoreSender`, `SeumPerf`, `SeumInput`, `SeumSteamOpt`, `SeumReplay`)
+   версия действительно изменилась по сравнению с предыдущим коммитом.
 2. Пересобирает **только** изменившиеся проекты.
 3. Для проектов без изменений версии — переиспользует DLL из предыдущего
    релиза (без пересборки).
@@ -224,7 +224,7 @@ gh release create gamelibs-cache GameLibs.zip \
 
 ### Как запустить релиз вручную
 
-Обычный триггер — пуш в `main` с изменённой `<Version>` хотя бы в одном
+Обычный триггер — пуш в `master` с изменённой `<Version>` хотя бы в одном
 `.csproj`. Если версии не менялись (например, для самого первого прогона
 пайплайна), workflow не найдёт изменений и ничего не соберёт — это
 ожидаемо, не баг.
@@ -233,10 +233,11 @@ gh release create gamelibs-cache GameLibs.zip \
 независимо от версий:
 
 1. Вкладка **Actions** в репозитории → workflow **"Build & release plugins"**.
-2. Кнопка **"Run workflow"** (справа) → ветка `main`.
+2. Кнопка **"Run workflow"** (справа) → ветка `master`.
 3. Поставьте галочку **`force`** — "Пересобрать и выпустить релиз со всеми
    плагинами, даже если версии не менялись".
 4. **"Run workflow"**.
 
-После успешного прогона в разделе **Releases** появится новый релиз с тремя
-DLL (`VelocityMeter.dll`, `SeumDiscordRPC.dll`, `LiveScoreSender.dll`).
+После успешного прогона в разделе **Releases** появится новый релиз со всеми
+DLL (`VelocityMeter.dll`, `SeumDiscordRPC.dll`, `LiveScoreSender.dll`,
+`SeumPerf.dll`, `SeumInput.dll`, `SeumSteamOpt.dll`, `SeumReplay.dll`).
