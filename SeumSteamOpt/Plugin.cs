@@ -32,6 +32,7 @@ namespace SeumSteamOpt
             FriendsPatches.Apply(harmony);
             AchievementPatches.Apply(harmony);
             WorkshopPatches.Apply(harmony);
+            IdentityPatches.Apply(harmony);
 
             // Cache invalidation needs Steam callbacks, which cannot be registered until the game's
             // SteamManager has run SteamAPI.Init. A DontDestroyOnLoad component waits for that and

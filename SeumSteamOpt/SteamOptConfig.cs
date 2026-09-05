@@ -25,10 +25,14 @@ namespace SeumSteamOpt
         // --- achievements ------------------------------------------------------------------
         internal static ConfigEntry<bool> CacheUnlockedAchievements;
 
+        // --- identity ------------------------------------------------------------------------
+        internal static ConfigEntry<bool> CacheSteamIdentity;
+
         // --- workshop ----------------------------------------------------------------------
         internal static ConfigEntry<float> ItemStateCacheSeconds;
         internal static ConfigEntry<bool> DeferWorkshopStartup;
         internal static ConfigEntry<bool> SkipEmptyUserMapQuery;
+        internal static ConfigEntry<bool> SkipAvatarsForUnknownAuthors;
 
         // --- diagnostics -------------------------------------------------------------------
         internal static ConfigEntry<float> StatsLogInterval;
@@ -95,6 +99,14 @@ namespace SeumSteamOpt
                 + "that is a marshalled Steam call several times a second for an achievement that is "
                 + "already unlocked. Confirmed unlocks are remembered for the session.");
 
+            CacheSteamIdentity = cfg.Bind("07 - Identity", "CacheSteamIdentity", true,
+                "SeumSteam.init reads the local player's persona name and Steam id and requests stats "
+                + "from Steam, but nothing in it checks the SeumSteam.initialized flag it sets when "
+                + "done - so it repeats all three calls every time the object holding it is recreated, "
+                + "which happens on every scene load. Practically that means every level restart during "
+                + "a practice session repeats it, none of which can change while the process runs. This "
+                + "skips the repeat once initialized is true.");
+
             ItemStateCacheSeconds = cfg.Bind("05 - Workshop", "ItemStateCacheSeconds", 5f,
                 new ConfigDescription(
                     "The workshop screen polls GetItemState once a second for every subscribed map. "
@@ -116,6 +128,16 @@ namespace SeumSteamOpt
                 + "query built from the maps you authored locally. If you have not authored any - "
                 + "which is the case for everyone who does not use the level editor - the query "
                 + "carries zero ids and can never return anything. This skips it.");
+
+            SkipAvatarsForUnknownAuthors = cfg.Bind("05 - Workshop", "SkipAvatarsForUnknownAuthors", true,
+                "The workshop registers a Steam callback for every friend's status change and keeps "
+                + "listening for the rest of the session, whether or not the workshop screen is ever "
+                + "open. Each firing unconditionally fetches and decodes that friend's full avatar "
+                + "image (GetLargeFriendAvatar, then GetImageSize and GetImageRGBA for 184x184 RGBA, "
+                + "135 KB) before checking whether they authored anything you have subscribed to or "
+                + "created - the only place that avatar is ever shown. For most friends, on most "
+                + "status changes, the decode is thrown away unused. This checks authorship first and "
+                + "skips the fetch entirely when there is no match.");
 
             StatsLogInterval = cfg.Bind("06 - Diagnostics", "StatsLogInterval", 0f,
                 new ConfigDescription(

@@ -21,8 +21,14 @@ namespace SeumSteamOpt
         internal static long AchievementReads;
         internal static long ItemStates;
 
-        /// <summary>Workshop UGC queries deferred past the main menu or skipped as empty.</summary>
+        /// <summary>
+        /// Workshop UGC queries deferred past the main menu or skipped as empty, plus background
+        /// avatar fetches skipped for a persona change from someone who authored nothing tracked.
+        /// </summary>
         internal static long WorkshopQueries;
+
+        /// <summary>SeumSteam.init calls skipped because the identity was already known.</summary>
+        internal static long IdentityReads;
 
         internal static void Add(ref long counter, long amount)
         {
@@ -36,7 +42,8 @@ namespace SeumSteamOpt
             + Interlocked.Read(ref UserInfoRequests)
             + Interlocked.Read(ref AchievementReads)
             + Interlocked.Read(ref ItemStates)
-            + Interlocked.Read(ref WorkshopQueries);
+            + Interlocked.Read(ref WorkshopQueries)
+            + Interlocked.Read(ref IdentityReads);
 
         internal static string Summary()
         {
@@ -44,7 +51,8 @@ namespace SeumSteamOpt
                 "Steam calls avoided so far: {0} "
                 + "(leaderboard lookups {1}, leaderboard downloads {2}, "
                 + "persona names {3}, user-info requests {4}, "
-                + "achievement reads {5}, workshop item states {6}, workshop queries {7})",
+                + "achievement reads {5}, workshop item states {6}, workshop queries {7}, "
+                + "identity reads {8})",
                 Total,
                 Interlocked.Read(ref LeaderboardFinds),
                 Interlocked.Read(ref LeaderboardDownloads),
@@ -52,7 +60,8 @@ namespace SeumSteamOpt
                 Interlocked.Read(ref UserInfoRequests),
                 Interlocked.Read(ref AchievementReads),
                 Interlocked.Read(ref ItemStates),
-                Interlocked.Read(ref WorkshopQueries));
+                Interlocked.Read(ref WorkshopQueries),
+                Interlocked.Read(ref IdentityReads));
         }
     }
 

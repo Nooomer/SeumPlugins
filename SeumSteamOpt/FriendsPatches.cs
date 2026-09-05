@@ -76,9 +76,23 @@ namespace SeumSteamOpt
         // ---------------------------------------------------------------------- persona names
 
         /// <summary>
-        /// A name that came back non-empty is kept until Steam says it changed. An empty one means
-        /// Steam has not fetched the user yet, so it is only held for the retry interval - otherwise
-        /// a row whose PersonaStateChange never arrives would stay blank forever.
+        /// Valve documents "[unknown]" as GetFriendPersonaName's answer for a user Steam has not
+        /// fetched yet - it is not a name, it is a pending marker, exactly like an empty string would
+        /// be from a saner API. Missing this case was a real bug: caching "[unknown]" as if it were a
+        /// resolved name meant it never got re-checked for anyone who is not an actual Steam friend,
+        /// because PersonaStateChange_t - the only thing that invalidates this cache - fires for
+        /// friends, not for strangers seen on a leaderboard. The result was every non-friend's name
+        /// staying "[unknown]" forever instead of resolving once Steam's async fetch completed.
+        /// </summary>
+        private static bool IsPending(string name)
+        {
+            return string.IsNullOrEmpty(name) || name == "[unknown]";
+        }
+
+        /// <summary>
+        /// A resolved name is kept until Steam says it changed. A pending one is only held for the
+        /// retry interval - otherwise a row Steam never sends a PersonaStateChange for (any player who
+        /// is not an actual friend) would stay on the placeholder forever.
         /// </summary>
         private static bool GetFriendPersonaNamePrefix(CSteamID steamIDFriend, ref string __result,
             out bool __state)
@@ -97,7 +111,7 @@ namespace SeumSteamOpt
                 }
             }
 
-            if (string.IsNullOrEmpty(entry.Name)
+            if (IsPending(entry.Name)
                 && Clock.Now - entry.Time >= Math.Max(SteamOptConfig.UserInfoRequestInterval.Value, 0.25f))
             {
                 return true;

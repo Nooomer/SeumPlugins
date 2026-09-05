@@ -22,6 +22,14 @@ namespace SeumSteamOpt
     /// then sends a further UGC query on every return to the main menu. All of it feeds
     /// subscribedMapInfos and userMaps, which nothing outside Workshop.cs reads and only
     /// Workshop.draw displays - and Workshop.draw only runs once the player opens the screen.
+    ///
+    /// Background, for the life of the session: Workshop.init registers a PersonaStateChange_t
+    /// callback in its "if (firstInit)" block, and that registration is never gated by whether the
+    /// screen is open. onPersonaChanged fires for every status change of every friend - going online,
+    /// changing game, anything - and unconditionally calls GetLargeFriendAvatar, then GetImageSize and
+    /// GetImageRGBA to decode a full 184x184 RGBA image (135 KB), before even checking whether that
+    /// friend authored anything in subscribedMapInfos or userMaps. For the overwhelming majority of
+    /// friends, on the overwhelming majority of status changes, that decode is thrown away unused.
     /// </summary>
     internal static class WorkshopPatches
     {
@@ -42,6 +50,9 @@ namespace SeumSteamOpt
         private static MethodInfo refreshAllDownloadedMaps;
         private static MethodInfo checkIfUserMapsArePublished;
         private static FieldInfo userMapsField;
+
+        private static FieldInfo subscribedMapInfosField;
+        private static FieldInfo mapInfoAuthorIdField;
 
         internal static void Apply(Harmony harmony)
         {
@@ -76,6 +87,24 @@ namespace SeumSteamOpt
             {
                 Patcher.Patch(harmony, self, typeof(Workshop), "checkIfUserMapsArePublished",
                     prefix: nameof(CheckIfUserMapsArePublishedPrefix));
+            }
+
+            if (SteamOptConfig.SkipAvatarsForUnknownAuthors.Value)
+            {
+                subscribedMapInfosField = AccessTools.Field(typeof(Workshop), "subscribedMapInfos");
+                Type mapInfoType = AccessTools.Inner(typeof(Workshop), "MapInfo");
+                mapInfoAuthorIdField = mapInfoType == null ? null : AccessTools.Field(mapInfoType, "authorId");
+
+                if (subscribedMapInfosField == null || userMapsField == null || mapInfoAuthorIdField == null)
+                {
+                    Plugin.Log.LogWarning("Workshop.subscribedMapInfos/userMaps/MapInfo.authorId not "
+                        + "found; avatar filtering for background persona changes disabled.");
+                }
+                else
+                {
+                    Patcher.Patch(harmony, self, typeof(Workshop), "onPersonaChanged",
+                        prefix: nameof(OnPersonaChangedPrefix));
+                }
             }
         }
 
@@ -155,6 +184,57 @@ namespace SeumSteamOpt
             {
                 return true;
             }
+        }
+
+        // ------------------------------------------------------------ background avatar filtering
+
+        /// <summary>
+        /// Skips the avatar fetch entirely for a persona change from someone who has not authored
+        /// anything the player has subscribed to or created - the only two places
+        /// setAvatarImage's result can end up. Letting the original run for an actual author is
+        /// required: that is the whole point of the callback existing.
+        /// </summary>
+        private static bool OnPersonaChangedPrefix(PersonaStateChange_t info)
+        {
+            if (IsKnownAuthor(info.m_ulSteamID))
+            {
+                return true;
+            }
+
+            Counters.Add(ref Counters.WorkshopQueries, 1);
+            return false;
+        }
+
+        private static bool IsKnownAuthor(ulong steamId)
+        {
+            try
+            {
+                return ListHasAuthor(subscribedMapInfosField.GetValue(null) as IEnumerable, steamId)
+                    || ListHasAuthor(userMapsField.GetValue(null) as IEnumerable, steamId);
+            }
+            catch (Exception)
+            {
+                // Not knowing means "let it through" - the original behaviour, just uncached.
+                return true;
+            }
+        }
+
+        private static bool ListHasAuthor(IEnumerable maps, ulong steamId)
+        {
+            if (maps == null)
+            {
+                return false;
+            }
+
+            foreach (object map in maps)
+            {
+                if (map != null && (ulong)mapInfoAuthorIdField.GetValue(map) == steamId)
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         /// <summary>Called from the install / update / subscription callbacks.</summary>

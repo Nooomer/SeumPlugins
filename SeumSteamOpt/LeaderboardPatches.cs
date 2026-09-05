@@ -41,6 +41,9 @@ namespace SeumSteamOpt
         private static MethodInfo downloadLeaderboardName;
         private static MethodInfo downloadEntries;
         private static MethodInfo uploadLeaderboardName;
+        private static MethodInfo uploadFoundOrCreated;
+        private static FieldInfo uploadDataField;
+        private static FieldInfo uploadRetryCounterField;
 
         private static bool handleCacheReady;
 
@@ -75,6 +78,13 @@ namespace SeumSteamOpt
                     {
                         Patcher.Patch(harmony, self, typeof(SteamUploadRequest), "leaderboardFoundOrCreated",
                             postfix: nameof(UploadFoundPostfix));
+
+                        // A score upload is not just cosmetic overhead like a redundant leaderboard
+                        // read - it happens on every level/zone/game finish, so this is where the
+                        // handle cache pays for itself the most, and where its absence was most
+                        // visible: a fresh FindOrCreateLeaderboard call on every single restart's
+                        // eventual upload, for hours, in the log that prompted this fix.
+                        PatchUploadConstructor(harmony, self);
                     }
                 }
             }
@@ -144,6 +154,100 @@ namespace SeumSteamOpt
                 handleCacheReady = false;
                 __instance.finished = true;
                 return false;
+            }
+
+            Counters.Add(ref Counters.LeaderboardFinds, 1);
+            return false;
+        }
+
+        /// <summary>
+        /// SteamUploadRequest has no separate "start" method to prefix like the download side does -
+        /// FindOrCreateLeaderboard is called inline in the constructor. Patching a constructor and
+        /// returning false from the prefix skips the constructor body entirely (the runtime has
+        /// already allocated __instance by the time the prefix runs), so the prefix takes over field
+        /// initialization itself on a cache hit and defers to the real constructor - unmodified - on
+        /// a miss.
+        /// </summary>
+        private static void PatchUploadConstructor(Harmony harmony, Type self)
+        {
+            try
+            {
+                ConstructorInfo ctor = AccessTools.Constructor(typeof(SteamUploadRequest),
+                    new[] { typeof(UploadRequestData), typeof(int) });
+                uploadFoundOrCreated = AccessTools.Method(typeof(SteamUploadRequest), "leaderboardFoundOrCreated");
+                uploadDataField = AccessTools.Field(typeof(SteamUploadRequest), "uploadData");
+                uploadRetryCounterField = AccessTools.Field(typeof(SteamUploadRequest), "retryCounter");
+
+                if (ctor == null || uploadFoundOrCreated == null
+                    || uploadDataField == null || uploadRetryCounterField == null)
+                {
+                    Plugin.Log.LogWarning("SteamUploadRequest constructor internals not found; "
+                        + "score-upload handle caching disabled.");
+                    return;
+                }
+
+                harmony.Patch(ctor, new HarmonyMethod(AccessTools.Method(self, nameof(UploadCtorPrefix))));
+
+                if (SteamOptConfig.VerboseLogging.Value)
+                {
+                    Plugin.Log.LogInfo("patched SteamUploadRequest..ctor");
+                }
+            }
+            catch (Exception e)
+            {
+                Plugin.Log.LogWarning("failed to patch SteamUploadRequest constructor: " + e.Message);
+            }
+        }
+
+        private static bool UploadCtorPrefix(SteamUploadRequest __instance, UploadRequestData uploadData,
+            int retryCount)
+        {
+            // The rest of this patch set reads uploadData/retryCounter (e.g. Remember() via
+            // leaderboardName()), so these are set before anything else runs, cache hit or miss.
+            uploadDataField.SetValue(__instance, uploadData);
+            uploadRetryCounterField.SetValue(__instance, retryCount);
+
+            string name;
+            SteamLeaderboard_t handle;
+            try
+            {
+                name = uploadLeaderboardName.Invoke(__instance, null) as string;
+            }
+            catch (Exception e)
+            {
+                Plugin.Log.LogWarning("upload handle cache failed, reverting to vanilla: " + e.Message);
+                return true;
+            }
+
+            if (string.IsNullOrEmpty(name))
+            {
+                return true;
+            }
+
+            lock (Handles)
+            {
+                if (!Handles.TryGetValue(name, out handle))
+                {
+                    return true;
+                }
+            }
+
+            try
+            {
+                LeaderboardFindResult_t syntheticResult = default(LeaderboardFindResult_t);
+                syntheticResult.m_hSteamLeaderboard = handle;
+                syntheticResult.m_bLeaderboardFound = 1;
+
+                // This is the same call the real FindOrCreateLeaderboard callback would have made -
+                // it still performs the one genuine Steam call this exists to keep, the score upload
+                // itself, and still teaches the cache through UploadFoundPostfix.
+                uploadFoundOrCreated.Invoke(__instance, new object[] { syntheticResult, false });
+            }
+            catch (Exception e)
+            {
+                Plugin.Log.LogWarning("upload from cached handle failed, reverting to vanilla for "
+                    + "later requests: " + e.Message);
+                return true;
             }
 
             Counters.Add(ref Counters.LeaderboardFinds, 1);
