@@ -91,12 +91,19 @@ namespace SeumSteamOpt
                 + "id and dropped again when Steam reports that the user's persona changed, so what "
                 + "is displayed stays correct.");
 
-            UserInfoRequestInterval = cfg.Bind("03 - Friends", "UserInfoRequestInterval", 0.25f,
+            UserInfoRequestInterval = cfg.Bind("03 - Friends", "UserInfoRequestInterval", 0f,
                 new ConfigDescription(
-                    "The same loop also calls RequestUserInformation for every row on every frame. "
-                    + "The answer only changes when Steam has finished fetching the user, so asking "
-                    + "60 times a second is pointless; this is how long a previous answer is reused. "
-                    + "Set to 0 to keep vanilla behaviour.",
+                    "The same loop also calls RequestUserInformation for every row on every frame, and "
+                    + "the game uses ITS RETURN VALUE - not just the name - to decide whether to keep "
+                    + "polling this leaderboard's rows at all: once every row's call returns false in "
+                    + "the same frame, the game stops asking for that board forever, whatever is "
+                    + "showing at that moment is final. Caching that return value for any nonzero "
+                    + "interval means a stale cached false, up to that many seconds old, can make the "
+                    + "game believe a row is resolved before Steam has actually answered - silently "
+                    + "freezing it, usually on \"[unknown]\", with nothing ever asking again. Off by "
+                    + "default for exactly that reason: unlike every other cache in this plugin, "
+                    + "caching this one can change what the game concludes, not just how often it "
+                    + "asks. Leave at 0 unless you have measured this loop as an actual cost.",
                     new AcceptableValueRange<float>(0f, 5f)));
 
             CacheUnlockedAchievements = cfg.Bind("04 - Achievements", "CacheUnlockedAchievements", true,
