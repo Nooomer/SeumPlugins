@@ -48,6 +48,7 @@ namespace SeumSteamOpt
         private static bool workshopOpened;
 
         private static MethodInfo refreshAllDownloadedMaps;
+        private static MethodInfo refreshUserMaps;
         private static MethodInfo checkIfUserMapsArePublished;
         private static FieldInfo userMapsField;
 
@@ -67,11 +68,13 @@ namespace SeumSteamOpt
             }
 
             refreshAllDownloadedMaps = AccessTools.Method(typeof(Workshop), "refreshAllDownloadedMaps");
+            refreshUserMaps = AccessTools.Method(typeof(Workshop), "refreshUserMaps");
             checkIfUserMapsArePublished = AccessTools.Method(typeof(Workshop), "checkIfUserMapsArePublished");
             userMapsField = AccessTools.Field(typeof(Workshop), "userMaps");
 
             if (SteamOptConfig.DeferWorkshopStartup.Value
                 && refreshAllDownloadedMaps != null
+                && refreshUserMaps != null
                 && checkIfUserMapsArePublished != null)
             {
                 // Workshop.update only runs while the screen is active, so it is the exact moment the
@@ -81,6 +84,15 @@ namespace SeumSteamOpt
 
                 Patcher.Patch(harmony, self, typeof(Workshop), "refreshAllDownloadedMaps",
                     prefix: nameof(RefreshAllDownloadedMapsPrefix));
+
+                // Unlike refreshAllDownloadedMaps, this one is not gated by Workshop's own firstInit
+                // flag - it reruns unconditionally on every single MainMenu.Start, i.e. every visit to
+                // the main menu, and for each locally authored map on disk it re-reads
+                // SteamUser.GetSteamID() and SteamFriends.GetPersonaName() - identity that cannot
+                // change and that CacheSteamIdentity does not reach, because this call site is
+                // separate from SeumSteam.init.
+                Patcher.Patch(harmony, self, typeof(Workshop), "refreshUserMaps",
+                    prefix: nameof(RefreshUserMapsPrefix));
             }
 
             if (SteamOptConfig.DeferWorkshopStartup.Value || SteamOptConfig.SkipEmptyUserMapQuery.Value)
@@ -126,6 +138,7 @@ namespace SeumSteamOpt
             try
             {
                 refreshAllDownloadedMaps.Invoke(null, null);
+                refreshUserMaps.Invoke(null, null);
                 checkIfUserMapsArePublished.Invoke(null, null);
             }
             catch (Exception e)
@@ -135,6 +148,24 @@ namespace SeumSteamOpt
         }
 
         private static bool RefreshAllDownloadedMapsPrefix()
+        {
+            if (workshopOpened || !SteamOptConfig.DeferWorkshopStartup.Value)
+            {
+                return true;
+            }
+
+            Counters.Add(ref Counters.WorkshopQueries, 1);
+            return false;
+        }
+
+        /// <summary>
+        /// Unlike the other two deferred calls, this one is not asynchronous - it does no Steam
+        /// calls of its own on a healthy vanilla run, only a local disk scan and, per locally authored
+        /// map, SteamUser.GetSteamID()/SteamFriends.GetPersonaName(). Counted separately from
+        /// WorkshopQueries would be more precise, but it shares the same "held back until the screen
+        /// opens" story, so it is folded into the same counter rather than adding a third one.
+        /// </summary>
+        private static bool RefreshUserMapsPrefix()
         {
             if (workshopOpened || !SteamOptConfig.DeferWorkshopStartup.Value)
             {

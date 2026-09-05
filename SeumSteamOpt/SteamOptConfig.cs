@@ -65,17 +65,23 @@ namespace SeumSteamOpt
                 + "staler, because the answer it would have waited for is already coming, so unlike "
                 + "RefreshCooldownSeconds it costs no freshness at all.");
 
-            RefreshCooldownSeconds = cfg.Bind("02 - Leaderboards", "RefreshCooldownSeconds", 0f,
+            RefreshCooldownSeconds = cfg.Bind("02 - Leaderboards", "RefreshCooldownSeconds", 2f,
                 new ConfigDescription(
                     "Extra minimum time between two downloads of the same leaderboard, on top of the "
-                    + "in-flight dedup above. Off by default because it is the one setting here that "
-                    + "genuinely delays data: at 30, a rival's new score can take up to 30 seconds to "
-                    + "appear. Keep it below the game's own 5 second refresh timer or it will start "
-                    + "eating scheduled refreshes as the two timers drift in and out of phase. It is "
+                    + "in-flight dedup above. The in-flight check only catches a request while the "
+                    + "previous one has not come back yet, but GameManager's own refresh timer starts "
+                    + "at -1 seconds, so its first Update() tick fires a second download of the same "
+                    + "board within roughly a tenth of a second of the one GameManager.Awake already "
+                    + "sent - by then the first has usually already answered, so nothing is in flight "
+                    + "to catch it. On a fast connection this happens on every single level load. This "
+                    + "default absorbs exactly that always-present vanilla double-fire, and nothing "
+                    + "more: it is well under the game's own 5 second refresh cadence, so a legitimate "
+                    + "scheduled tick is never blocked. Raising it trades more freshness for less "
+                    + "traffic - at 30, a rival's new score can take up to 30 seconds to appear. It is "
                     + "cleared on every scene load, so a mod that applies a setting by reloading the "
                     + "level - VelocityMeter's leaderboard range editor does exactly that - still gets "
                     + "its fresh download. Your own new record is never affected either: a successful "
-                    + "upload re-downloads directly, bypassing this path.",
+                    + "upload re-downloads directly, bypassing this path. 0 disables it entirely.",
                     new AcceptableValueRange<float>(0f, 600f)));
 
             CachePersonaNames = cfg.Bind("03 - Friends", "CachePersonaNames", true,
