@@ -4,7 +4,7 @@
     <TargetFramework>net472</TargetFramework>
     <AssemblyName>LiveScoreSender</AssemblyName>
     <Product>Live score sender with retry</Product>
-    <Version>1.0.1</Version>
+    <Version>1.0.2</Version>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <LangVersion>latest</LangVersion>
     <RestoreAdditionalProjectSources>
@@ -21,16 +21,24 @@
     <PackageReference Include="BepInEx.Core" Version="5.4.19" />
     <PackageReference Include="BepInEx.PluginInfoProps" Version="2.*" />
     <PackageReference Include="UnityEngine.Modules" Version="2018.3.7" IncludeAssets="compile" />
-    <!-- BepInEx уже несёт Newtonsoft.Json 13.0.2 в BepInEx/core и подхватывает
-         его в рантайме через свой assembly resolver, поэтому в сборку плагина
-         копировать эту сборку не нужно — только ссылка для компиляции. -->
-    <PackageReference Include="Newtonsoft.Json" Version="13.0.2" ExcludeAssets="runtime" PrivateAssets="all" />
+    <!-- В релизе BepInEx Newtonsoft.Json по умолчанию отсутствует (несмотря
+         на ожидания), поэтому сборку нельзя оставлять только ссылкой для
+         компиляции — она встраивается в LiveScoreSender.dll как embedded
+         resource (см. NewtonsoftJsonLoader.cs) и грузится вручную. -->
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.2" ExcludeAssets="runtime" PrivateAssets="all" GeneratePathProperty="true" />
   </ItemGroup>
-  
+
   <ItemGroup Condition="'$(TargetFramework.TrimEnd(`0123456789`))' == 'net'">
     <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.2" PrivateAssets="all" />
   </ItemGroup>
-  
+
+  <ItemGroup>
+    <EmbeddedResource Include="$(PkgNewtonsoft_Json)\lib\net45\Newtonsoft.Json.dll">
+      <Link>Newtonsoft.Json.dll</Link>
+      <LogicalName>LiveScoreSender.Newtonsoft.Json.dll</LogicalName>
+    </EmbeddedResource>
+  </ItemGroup>
+
   <ItemGroup>
     <Reference Include="Assembly-CSharp">
       <HintPath>$(GameManagedDir)\Assembly-CSharp.dll</HintPath>

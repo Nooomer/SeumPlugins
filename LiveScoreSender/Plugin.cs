@@ -29,6 +29,14 @@ namespace LiveScoreSender
         private string _storagePath;
         private bool _isProcessing;
 
+        // Регистрируем резолвер встроенного Newtonsoft.Json до того, как CLR
+        // впервые обратится к типам этой сборки в Awake() — статический
+        // конструктор гарантированно выполняется раньше.
+        static Plugin()
+        {
+            NewtonsoftJsonLoader.EnsureRegistered();
+        }
+
         private void Awake()
         {
             // Настройка Newtonsoft.Json для совместимости с Unity (отключаем генерацию кода)
