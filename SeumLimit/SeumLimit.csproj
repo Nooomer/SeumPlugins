@@ -5,7 +5,7 @@
     <AssemblyName>SeumLimit</AssemblyName>
     <Product>SeumLimit</Product>
     <Description>Estimates how much time is left on a level by analysing the top leaderboard replays in SEUM — Speedrunners from Hell.</Description>
-    <Version>0.1.0</Version>
+    <Version>1.0.0</Version>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <LangVersion>latest</LangVersion>
     <RestoreAdditionalProjectSources>
