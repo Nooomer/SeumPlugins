@@ -7,4 +7,5 @@
   <Project Path="SeumSteamOpt/SeumSteamOpt.csproj" />
   <Project Path="SeumInput/SeumInput.csproj" />
   <Project Path="SeumFreeCam/SeumFreeCam.csproj" />
+  <Project Path="SeumLimit/SeumLimit.csproj" />
 </Solution>
