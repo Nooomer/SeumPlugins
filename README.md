@@ -119,7 +119,22 @@
 
 Подробности — [SeumFreeCam/README.md](SeumFreeCam/README.md).
 
-> У SeumPerf, SeumInput, SeumSteamOpt, SeumReplay и SeumFreeCam есть свой файл настроек
+### SeumLimit — предельное время уровня и разбор забега
+
+На экране прицеливания плагин скачивает реплеи топ-5 текущей таблицы и
+показывает два лимита. **Лимит A** — лучший забег, который склеивается из
+кусков топ-5 там, где игроки были в одном состоянии (позиция, скорость, свечки,
+ничего не летит): каждый его кусок кто-то реально сыграл. **Лимит B** — сколько
+ещё можно выжать на линии самого WR по физике игры: разгон, рор без провалов,
+бег за шаром телепорта, срезы, проверенные по геометрии уровня.
+
+После финиша на экране победы — разбор вашего забега: лимит A с вашим забегом за
+основу и три отрезка, где вы теряете к нему больше всего, с именем того, у кого
+этот отрезок лучше. Результаты кэшируются и пересчитываются, когда меняется WR.
+
+Подробности — [SeumLimit/README.md](SeumLimit/README.md).
+
+> У SeumPerf, SeumInput, SeumSteamOpt, SeumReplay, SeumFreeCam и SeumLimit есть свой файл настроек
 > (`BepInEx/config/<Имя плагина>.cfg`) — он создаётся автоматически при
 > первом запуске плагина, менять его руками до этого не нужно. Пример
 > файла со всеми параметрами и их описанием — в README самого плагина.
@@ -153,7 +168,7 @@
 
 Скачайте нужные `.dll` (`VelocityMeter.dll`, `SeumDiscordRPC.dll`,
 `LiveScoreSender.dll`, `SeumPerf.dll`, `SeumInput.dll`, `SeumSteamOpt.dll`,
-`SeumReplay.dll`, `SeumFreeCam.dll` —
+`SeumReplay.dll`, `SeumFreeCam.dll`, `SeumLimit.dll` —
 можно ставить как все сразу, так и по отдельности) и положите их в папку
 
 ```
@@ -198,7 +213,7 @@ dotnet build VelocityMeter/VelocityMeter.csproj -c Release /p:GameManagedDir="<�
 
 1. Определяет, у каких из проектов (`VelocityMeter`, `SeumDiscordRPC`,
    `LiveScoreSender`, `SeumPerf`, `SeumInput`, `SeumSteamOpt`, `SeumReplay`,
-   `SeumFreeCam`)
+   `SeumFreeCam`, `SeumLimit`)
    версия действительно изменилась по сравнению с предыдущим коммитом.
 2. Пересобирает **только** изменившиеся проекты.
 3. Для проектов без изменений версии — переиспользует DLL из предыдущего
