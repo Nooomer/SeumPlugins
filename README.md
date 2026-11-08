@@ -122,6 +122,21 @@
 
 Подробности — [SeumStorageFix/README.md](SeumStorageFix/README.md).
 
+### SeumLeaderboardFilter — скрыть читеров и портал-стораджи
+
+Убирает из таблицы рекордов все записи игроков из локального чёрного списка
+SteamID, явные портал-стораджи (результат ≤600 мс, минимум вдвое быстрее
+следующего) и мягкие пауэрап-отрывы в топе: ≥18% и ≥1000 мс от следующего
+результата, с проверкой цепочки #1→#2→#3. Легитимные Pyramid `10.783 → 11.600`
+и Satan `21.516 → 22.000` не трогаются, а `1.924 → 4.493` и `6.171 → 7.556`
+убираются. По умолчанию в ЧС `keaz` и `bruh`; Dempsey там нет — его `0.500`
+на Gravity Swapper / Roar ловится портал-правилом. На глобальной доске
+оставшиеся строки перенумеровываются 1..N, а загрузка расширяется с 15 до 50
+записей, чтобы после скрытия строк таблица не становилась короче. Файл
+`BepInEx/config/SeumLeaderboardFilter.blacklist.txt` перечитывается на лету.
+
+Подробности — [SeumLeaderboardFilter/README.md](SeumLeaderboardFilter/README.md).
+
 ### SeumFreeCam — камера со стороны в реплее
 Во время просмотра реплея по клавише **F** камера отцепляется от бегущего, и
 вокруг забега можно свободно летать (`WASD` + мышь, `E`/`Q` — вверх/вниз,
@@ -154,7 +169,7 @@
 
 Подробности — [SeumLimit/README.md](SeumLimit/README.md).
 
-> У SeumPerf, SeumInput, SeumSteamOpt, SeumReplay, SeumFreeCam, SeumLimit, SeumTimerFix и SeumStorageFix есть свой файл настроек
+> У SeumPerf, SeumInput, SeumSteamOpt, SeumReplay, SeumFreeCam, SeumLimit, SeumTimerFix, SeumStorageFix и SeumLeaderboardFilter есть свой файл настроек
 > (`BepInEx/config/<Имя плагина>.cfg`) — он создаётся автоматически при
 > первом запуске плагина, менять его руками до этого не нужно. Пример
 > файла со всеми параметрами и их описанием — в README самого плагина.
@@ -189,7 +204,7 @@
 Скачайте нужные `.dll` (`VelocityMeter.dll`, `SeumDiscordRPC.dll`,
 `LiveScoreSender.dll`, `SeumPerf.dll`, `SeumInput.dll`, `SeumSteamOpt.dll`,
 `SeumReplay.dll`, `SeumFreeCam.dll`, `SeumLimit.dll`, `SeumTimerFix.dll`,
-`SeumStorageFix.dll` —
+`SeumStorageFix.dll`, `SeumLeaderboardFilter.dll` —
 можно ставить как все сразу, так и по отдельности) и положите их в папку
 
 ```
@@ -234,7 +249,8 @@ dotnet build VelocityMeter/VelocityMeter.csproj -c Release /p:GameManagedDir="<�
 
 1. Определяет, у каких из проектов (`VelocityMeter`, `SeumDiscordRPC`,
    `LiveScoreSender`, `SeumPerf`, `SeumInput`, `SeumSteamOpt`, `SeumReplay`,
-   `SeumFreeCam`, `SeumLimit`, `SeumTimerFix`, `SeumStorageFix`)
+   `SeumFreeCam`, `SeumLimit`, `SeumTimerFix`, `SeumStorageFix`,
+   `SeumLeaderboardFilter`)
    версия действительно изменилась по сравнению с предыдущим коммитом.
 2. Пересобирает **только** изменившиеся проекты.
 3. Для проектов без изменений версии — переиспользует DLL из предыдущего
@@ -298,4 +314,6 @@ gh release create gamelibs-cache GameLibs.zip \
 
 После успешного прогона в разделе **Releases** появится новый релиз со всеми
 DLL (`VelocityMeter.dll`, `SeumDiscordRPC.dll`, `LiveScoreSender.dll`,
-`SeumPerf.dll`, `SeumInput.dll`, `SeumSteamOpt.dll`, `SeumReplay.dll`).
+`SeumPerf.dll`, `SeumInput.dll`, `SeumSteamOpt.dll`, `SeumReplay.dll`,
+`SeumFreeCam.dll`, `SeumLimit.dll`, `SeumTimerFix.dll`, `SeumStorageFix.dll`,
+`SeumLeaderboardFilter.dll`).

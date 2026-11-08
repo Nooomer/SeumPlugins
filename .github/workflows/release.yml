@@ -53,7 +53,8 @@ jobs:
             @{ Name = "SeumFreeCam";    Path = "SeumFreeCam/SeumFreeCam.csproj" },
             @{ Name = "SeumLimit";      Path = "SeumLimit/SeumLimit.csproj" },
             @{ Name = "SeumTimerFix";   Path = "SeumTimerFix/SeumTimerFix.csproj" },
-            @{ Name = "SeumStorageFix"; Path = "SeumStorageFix/SeumStorageFix.csproj" }
+            @{ Name = "SeumStorageFix"; Path = "SeumStorageFix/SeumStorageFix.csproj" },
+            @{ Name = "SeumLeaderboardFilter"; Path = "SeumLeaderboardFilter/SeumLeaderboardFilter.csproj" }
           )
 
           function Get-Version($content) {
