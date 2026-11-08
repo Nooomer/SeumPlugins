@@ -47,6 +47,10 @@ namespace SeumTimerFix
 
             harmony.PatchAll(typeof(TimerPatches));
             Plugin.Log.LogInfo("SeumTimerFix: tick clock armed; level time is now tick-exact.");
+
+            // Optional variant-B rewrite of the entity movement phases (axes, rotators, chains,
+            // animated spikes, moving platforms); off unless FixEntityPhases is enabled.
+            PhasePatches.Apply(harmony);
         }
 
         [HarmonyPatch(typeof(GameManager), "FixedUpdate")]

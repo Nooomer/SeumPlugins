@@ -52,6 +52,31 @@ GameManager.calculateCurrentLevelTime() =
 поэтому `ticks * fixedDeltaTime` — это ровно та сетка, на которой должен был
 идти таймер.
 
+## Фикс фаз движущихся сущностей (вариант B)
+
+Топоры, ротаторы, цепи, анимированные шипы и движущиеся платформы вычисляют
+фазу движения от **абсолютного** float32-времени сессии
+(`sin(Time.time × speed + …)`, `Time.time − restartTimestamp` и т.п.), поэтому
+после долгой сессии их тайминг сдвигается и дёргается вместе с таймербагом.
+
+Погрешность из самих float-значений арифметикой не вычесть (округление уже
+уничтожило информацию), поэтому тумблер `FixEntityPhases` пересчитывает фазы
+от бездрейфового эквивалента `Time.time`:
+
+```
+PhaseTime = (Time.time − Time.fixedTime) + тик × fixedDeltaTime
+```
+
+- первое слагаемое — та самая «рендерная» составляющая, которую ваниль и так
+  использует (точная разность тех же float);
+- второе — точная тиковая сетка вместо накопленного float-дрейфа.
+
+Формулы, скорости и якоря рестарта/циклов у сущностей сохраняются
+один-в-один: на свежей сессии фазы совпадают с ванилью, после часовой —
+ведут себя как на свежей. Остаётся только тот же квант ±ULP/2 на чтение, что
+есть и у ванили (он не накапливается). По умолчанию выключено, так как это
+изменение поведения сущностей относительно «поплывшей» ванили.
+
 ## Диагностика
 
 По клавише **F6** включается оверлей, который показывает дрейф таймера вживую:
@@ -86,6 +111,19 @@ run drift -0.452 ms   |max| 0.512
 # Setting type: Boolean
 # Default value: true
 Enabled = true
+
+[03 - Entities]
+
+## Variant-B fix for the movement phases of entities that derive their phase from
+## absolute float32 session time: axes, rotators, chains, animated spikes and
+## moving platforms. Their vanilla formula (including the render-clock part) is
+## kept, only the accumulated float32 drift is replaced with an exact tick-grid
+## term, so they behave like on a freshly started game. Off by default because
+## the phases still contain the same tiny per-read float quantization the vanilla
+## game has.
+# Setting type: Boolean
+# Default value: false
+FixEntityPhases = false
 
 [08 - Diagnostics]
 
