@@ -51,6 +51,23 @@
 (выстрел в воздухе ставит `teleportedInAirTime = -1`, и окно защиты не
 срабатывает).
 
+## Лог предотвращённых стораджей
+
+Плагин по умолчанию пишет в `BepInEx/LogOutput.log` каждый реально
+предотвращённый сторадж. Примеры записей:
+
+```
+[Info :SeumStorageFix] SeumStorageFix: restart cleaned up 3 leftover(s) from the previous run:
+[Info :SeumStorageFix]   dropped 1 pending state transition(s) on restart: FINISH_LEVEL (portal storage)
+[Info :SeumStorageFix]   cleared leftover teleport projectile
+[Info :SeumStorageFix]   cleared portal-pass timer 0.412
+[Info :SeumStorageFix] SeumStorageFix: landing 0.017 s after teleport activation - charge refund suppressed (restored teleportsUsedInAir 1, chargesActive 2)
+```
+
+События редкие — в обычной игре лог молчит; каждая строка означает, что
+конкретный сторадж в этот момент был бы возможен без плагина. Отключается
+параметром `LogPreventedStorages`.
+
 ## Настройки
 
 Файл `BepInEx/config/SeumStorageFix.cfg` создаётся автоматически при первом
@@ -72,6 +89,16 @@ Enabled = true
 # Setting type: Boolean
 # Default value: true
 FixRechargeRace = true
+
+[08 - Diagnostics]
+
+## Log every storage the plugin prevented: dropped pending state transitions on
+## restart, cleared leftovers of the previous run, and suppressed charge refunds
+## inside the activation window. These events are rare, so the log stays quiet in
+## normal play.
+# Setting type: Boolean
+# Default value: true
+LogPreventedStorages = true
 ```
 
 ## Совместимость
