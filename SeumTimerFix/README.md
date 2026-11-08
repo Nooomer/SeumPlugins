@@ -52,6 +52,28 @@ GameManager.calculateCurrentLevelTime() =
 поэтому `ticks * fixedDeltaTime` — это ровно та сетка, на которой должен был
 идти таймер.
 
+## Диагностика
+
+По клавише **F6** включается оверлей, который показывает дрейф таймера вживую:
+
+```
+SeumTimerFix   (F6 - toggle)
+session 4213.7 s   float ULP 0.488 ms
+fixedTime drift +11.234 ms   min -1.832   max +11.234   |max| 11.234
+run drift -0.452 ms   |max| 0.512
+```
+
+- **fixedTime drift** — насколько `float32`-счётчик `Time.fixedTime` ушёл от точной
+  тиковой сетки (`тик × fixedDeltaTime`). Это и есть таймербаг: у свежей игры
+  дрейф ~0, после часа сессии он начинает расти, и именно эти миллисекунды
+  случайно попадают в ванильное время забега.
+- **run drift** — насколько «поплывшее» ванильное вычисление
+  `Time.fixedTime - levelSpawnTime + offset` отличалось бы от тикового значения
+  прямо сейчас в текущем забеге. Сразу после старта забега оно равно нулю и
+  растёт вместе с ошибкой float.
+- **float ULP** — шаг сетки float32 при текущей величине `Time.fixedTime`
+  (~0.488 мс после часа сессии).
+
 ## Настройки
 
 Файл `BepInEx/config/SeumTimerFix.cfg` создаётся автоматически при первом
@@ -64,6 +86,20 @@ GameManager.calculateCurrentLevelTime() =
 # Setting type: Boolean
 # Default value: true
 Enabled = true
+
+[08 - Diagnostics]
+
+## Draw a small overlay with the timer drift: how far Unity's float Time.fixedTime
+## has moved off the exact tick grid (the timer bug), and how far the vanilla
+## level time would be off right now.
+# Setting type: Boolean
+# Default value: false
+Overlay = false
+
+## Toggles the overlay at runtime.
+# Setting type: KeyCode
+# Default value: F6
+OverlayKey = F6
 ```
 
 ## Совместимость

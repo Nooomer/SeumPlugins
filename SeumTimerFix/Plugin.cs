@@ -33,6 +33,11 @@ namespace SeumTimerFix
             }
 
             TimerPatches.Apply(new Harmony(MyPluginInfo.PLUGIN_GUID));
+
+            // The runtime owns the diagnostic overlay (F6, or the config toggle) and keeps it
+            // alive across scene loads; with the overlay off it costs only a key check per frame.
+            TimerRuntime.Create();
+
             Log.LogInfo($"{MyPluginInfo.PLUGIN_NAME} {MyPluginInfo.PLUGIN_VERSION} loaded.");
         }
     }
