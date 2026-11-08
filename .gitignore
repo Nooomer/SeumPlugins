@@ -366,3 +366,6 @@ FodyWeavers.xsd
 *.il
 Assembly-CSharp*.res
 dll-il/
+# DSH sandbox ACL repair reports (session-local)
+.dsh-acl-reports/
+

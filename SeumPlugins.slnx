@@ -8,4 +8,6 @@
   <Project Path="SeumInput/SeumInput.csproj" />
   <Project Path="SeumFreeCam/SeumFreeCam.csproj" />
   <Project Path="SeumLimit/SeumLimit.csproj" />
+  <Project Path="SeumTimerFix/SeumTimerFix.csproj" />
+  <Project Path="SeumStorageFix/SeumStorageFix.csproj" />
 </Solution>

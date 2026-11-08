@@ -101,8 +101,28 @@
 
 Подробности — [SeumReplay/README.md](SeumReplay/README.md).
 
-### SeumFreeCam — камера со стороны в реплее
+### SeumTimerFix — фикс таймербага
 
+После долгой сессии (~70 минут) игровой таймер начинает плыть относительно
+тикрейта: шаги таймера становятся неровными, а забег случайно выигрывает или
+теряет несколько миллисекунд. Плагин считает время уровня от собственного
+точного счётчика тиков (`тик × fixedDeltaTime`) вместо float-вычитания
+`Time.fixedTime - levelSpawnTime`, у которого после часа игры не хватает
+точности. В короткой сессии поведение неотличимо от ванили.
+
+Подробности — [SeumTimerFix/README.md](SeumTimerFix/README.md).
+
+### SeumStorageFix — фикс стораджей
+
+Чинит перенос состояния между забегами (стораджи): закешированное завершение
+уровня больше не может завершить свежий рестарт за 0.000 (портал-сторадж),
+приземление не возвращает заряд телепорта/рёва в тот же тик, когда активация
+его потратила (телепорт-сторадж), а поля состояния персонажа, которые штатный
+сброс игры пропускает, очищаются при каждом рестарте.
+
+Подробности — [SeumStorageFix/README.md](SeumStorageFix/README.md).
+
+### SeumFreeCam — камера со стороны в реплее
 Во время просмотра реплея по клавише **F** камера отцепляется от бегущего, и
 вокруг забега можно свободно летать (`WASD` + мышь, `E`/`Q` — вверх/вниз,
 `Shift`/`Alt` — быстрее/медленнее, колесо — базовая скорость, `C` — вернуться к
@@ -134,7 +154,7 @@
 
 Подробности — [SeumLimit/README.md](SeumLimit/README.md).
 
-> У SeumPerf, SeumInput, SeumSteamOpt, SeumReplay, SeumFreeCam и SeumLimit есть свой файл настроек
+> У SeumPerf, SeumInput, SeumSteamOpt, SeumReplay, SeumFreeCam, SeumLimit, SeumTimerFix и SeumStorageFix есть свой файл настроек
 > (`BepInEx/config/<Имя плагина>.cfg`) — он создаётся автоматически при
 > первом запуске плагина, менять его руками до этого не нужно. Пример
 > файла со всеми параметрами и их описанием — в README самого плагина.
@@ -168,7 +188,8 @@
 
 Скачайте нужные `.dll` (`VelocityMeter.dll`, `SeumDiscordRPC.dll`,
 `LiveScoreSender.dll`, `SeumPerf.dll`, `SeumInput.dll`, `SeumSteamOpt.dll`,
-`SeumReplay.dll`, `SeumFreeCam.dll`, `SeumLimit.dll` —
+`SeumReplay.dll`, `SeumFreeCam.dll`, `SeumLimit.dll`, `SeumTimerFix.dll`,
+`SeumStorageFix.dll` —
 можно ставить как все сразу, так и по отдельности) и положите их в папку
 
 ```
@@ -213,7 +234,7 @@ dotnet build VelocityMeter/VelocityMeter.csproj -c Release /p:GameManagedDir="<�
 
 1. Определяет, у каких из проектов (`VelocityMeter`, `SeumDiscordRPC`,
    `LiveScoreSender`, `SeumPerf`, `SeumInput`, `SeumSteamOpt`, `SeumReplay`,
-   `SeumFreeCam`, `SeumLimit`)
+   `SeumFreeCam`, `SeumLimit`, `SeumTimerFix`, `SeumStorageFix`)
    версия действительно изменилась по сравнению с предыдущим коммитом.
 2. Пересобирает **только** изменившиеся проекты.
 3. Для проектов без изменений версии — переиспользует DLL из предыдущего
